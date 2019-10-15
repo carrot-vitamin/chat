@@ -1,0 +1,34 @@
+server:
+  servlet:
+    context-path: /chat
+    session:
+      timeout: 30m
+  tomcat:
+    uri-encoding: UTF-8
+    max-http-post-size: -1
+spring:
+  profiles:
+    active: mac
+  freemarker:
+    suffix: .ftl
+    content-type: text/html
+    charset: UTF-8
+    cache: false
+    template-loader-path: ["classpath:/templates/"]
+    request-context-attribute: request
+#  mvc:
+#    static-path-pattern: /static/**
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  servlet:
+    multipart:
+      #不受限制改为-1即可
+      max-file-size: 1GB
+      #不受限制改为-1即可
+      max-request-size: 800MB
+
+logging:
+  config: classpath:logback-${spring.profiles.active}.xml
