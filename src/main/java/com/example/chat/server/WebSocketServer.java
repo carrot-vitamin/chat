@@ -38,24 +38,24 @@ public class WebSocketServer {
     /**
      * 放入map中的key,用来表示该连接对象
      */
-    private String username;
+    private String userId;
 
     /**
      * 连接建立成功调用的方法
      */
     @OnOpen
-    public void onOpen(Session session, @PathParam("userId") String username) {
+    public void onOpen(Session session, @PathParam("userId") String userId) {
         this.session = session;
-        this.username = username;
+        this.userId = userId;
         //加入map中,为了测试方便使用username做key
-        users.put(username, this);
+        users.put(userId, this);
         //在线数加1
         addOnlineCount();
-        log.info("【{}】加入！当前在线人数为【{}】", username, getOnlineCount());
+        log.info("【{}】加入！当前在线人数为【{}】", userId, getOnlineCount());
         try {
             this.session.getBasicRemote().sendText("连接成功");
         } catch (IOException e) {
-            log.error("websocket IO异常");
+            log.error("websocket IO异常", e);
         }
     }
 
@@ -65,7 +65,7 @@ public class WebSocketServer {
     @OnClose
     public void onClose() {
         //从set中删除
-        users.remove(this.username);
+        users.remove(this.userId);
         //在线数减1
         subOnlineCount();
         log.info("一个连接关闭！当前在线人数为【{}】", getOnlineCount());
@@ -93,7 +93,7 @@ public class WebSocketServer {
                 }
                 String firstUser = users[1].trim();
                 if (StringUtils.isEmpty(firstUser) || "ALL".equals(firstUser.toUpperCase())) {
-                    String msg = username + ": " + split[1];
+                    String msg = userId + ": " + split[1];
                     //群发消息
                     sendInfo(msg);
                 } else {//给特定人员发消息
@@ -104,7 +104,7 @@ public class WebSocketServer {
                     }
                 }
             } else {
-                sendInfo(username + ": " + message);
+                sendInfo(userId + ": " + message);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -113,23 +113,22 @@ public class WebSocketServer {
 
     @OnError
     public void onError(Session session, Throwable error) {
-        log.error("发生错误 session: " + session);
-        error.printStackTrace();
+        log.error("发生错误 session: {}", session, error);
     }
 
     /**
      * 给特定人员发送消息
      *
-     * @param username 发送对象
+     * @param userId 发送对象
      * @param message  消息内容
      * @throws IOException IOException
      */
-    private void sendMessageToSomeBody(String username, String message) throws IOException {
-        if (users.get(username) == null) {
+    private void sendMessageToSomeBody(String userId, String message) throws IOException {
+        if (users.get(userId) == null) {
             return;
         }
-        users.get(username).session.getBasicRemote().sendText(this.username + "发来的私信：" + message);
-        this.session.getBasicRemote().sendText(this.username + "@" + username + ": " + message);
+        users.get(userId).session.getBasicRemote().sendText(this.userId + "发来的私信：" + message);
+        this.session.getBasicRemote().sendText(this.userId + "@" + userId + ": " + message);
     }
 
     /**

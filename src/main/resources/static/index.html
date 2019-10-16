@@ -8,7 +8,7 @@
     <link href="css/bootstrap.min.css" rel="stylesheet">
 
     <!--icon-->
-    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="shortcut icon" href="chat.ico">
 
     <script src="js/jquery.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
@@ -17,7 +17,7 @@
         var socket;
 
         //登录过后初始化socket连接
-        function initSocket(userId) {
+        function initSocket(id, wsUrl) {
             if (typeof (WebSocket) == "undefined") {
                 console.log("您的浏览器不支持WebSocket");
                 alert("您的浏览器不支持WebSocket");
@@ -25,7 +25,7 @@
                 console.log("您的浏览器支持WebSocket/websocket");
             }
             //socket连接地址: 注意是ws协议
-            socket = new WebSocket("ws://localhost:8080/chat/websocket/" + userId);
+            socket = new WebSocket(wsUrl);
             socket.onopen = function () {
                 console.log("Socket 已打开");
             };
@@ -59,31 +59,24 @@
             if (!isEmpty(msg)) {
                 console.log("发送消息: " + msg);
                 socket.send($("#msg").val());
-                $("#msg").reload();
+                $("#msg").val();
             } else {
                 alert("不可发送空消息！");
             }
 
         }
-
-        //登录
-        function login() {
-            $.ajax({
-                url: "/chat/login",
-                data: $("#loginForm").serialize(),
-                type: "POST",
-                success: function (userId) {
-                    if (userId) {
-                        console.log("登录成功!");
-                        initSocket(userId);
-                    }
-                }
-            });
-        }
     </script>
 </head>
 <body class="container-fluid">
-<div class="row" style="margin-top: 30px;">
+<div class="row">
+    <div class="col-md-3"></div>
+    <div class="col-md-6">
+        <input class="userId" style="display: none" value="${a}">
+    </div>
+    <div class="col-md-3"></div>
+</div>
+
+<div class="row" style="margin-top: 20px;">
     <div class="col-md-3"></div>
     <div class="col-md-6">
         <pre style="height: 400px;" id="history"></pre>
@@ -104,5 +97,32 @@
     </div>
     <div class="col-md-3"></div>
 </div>
+
+<script type="application/javascript">
+    function getQueryVariable(variable) {
+        var query = window.location.search.substring(1);
+        var vars = query.split("&");
+        for (var i = 0; i < vars.length; i++) {
+            var pair = vars[i].split("=");
+            if (pair[0] === variable) {
+                return pair[1];
+            }
+        }
+        return false;
+    }
+
+    function getContextPath() {
+        var pathName = document.location.pathname;
+        var index = pathName.substr(1).indexOf("/");
+        return pathName.substr(0,index+1);
+    }
+
+    $(document).ready(function (e) {
+        var id = getQueryVariable("id");
+        var contextPath = getContextPath();
+        var wsUrl = "ws://" + location.host + contextPath + "/websocket/" + id;
+        initSocket(id, wsUrl);
+    })
+</script>
 </body>
 </html>
