@@ -107,7 +107,7 @@ public class WebSocketServer {
                 sendInfo(userId + ": " + message);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
     }
 
