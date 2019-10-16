@@ -59,7 +59,7 @@
             if (!isEmpty(msg)) {
                 console.log("发送消息: " + msg);
                 socket.send($("#msg").val());
-                $("#msg").val();
+                $("#msg").val("");
             } else {
                 alert("不可发送空消息！");
             }
