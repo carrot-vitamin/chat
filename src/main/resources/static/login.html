@@ -52,7 +52,7 @@
             if (responseText.code != "000000") {
                 alert(responseText.message);
             } else {
-                window.location.href = "index.html?id=" + responseText.data.id;
+                window.location.href = "index.html?username=" + responseText.data.username;
             }
         },
         resetForm: true,

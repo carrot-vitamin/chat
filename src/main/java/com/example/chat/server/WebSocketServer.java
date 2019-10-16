@@ -8,7 +8,9 @@ import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,7 +18,7 @@ import java.util.Map;
  * @author yinshaobo on 2019-09-25 14:38
  */
 @Slf4j
-@ServerEndpoint("/websocket/{userId}")
+@ServerEndpoint("/websocket/{username}")
 @Component
 public class WebSocketServer {
 
@@ -38,20 +40,20 @@ public class WebSocketServer {
     /**
      * 放入map中的key,用来表示该连接对象
      */
-    private String userId;
+    private String username;
 
     /**
      * 连接建立成功调用的方法
      */
     @OnOpen
-    public void onOpen(Session session, @PathParam("userId") String userId) {
+    public void onOpen(Session session, @PathParam("username") String username) {
         this.session = session;
-        this.userId = userId;
+        this.username = username;
         //加入map中,为了测试方便使用username做key
-        users.put(userId, this);
+        users.put(username, this);
         //在线数加1
         addOnlineCount();
-        log.info("【{}】加入！当前在线人数为【{}】", userId, getOnlineCount());
+        log.info("【{}】加入！当前在线人数为【{}】", username, getOnlineCount());
         try {
             this.session.getBasicRemote().sendText("连接成功");
         } catch (IOException e) {
@@ -65,7 +67,7 @@ public class WebSocketServer {
     @OnClose
     public void onClose() {
         //从set中删除
-        users.remove(this.userId);
+        users.remove(this.username);
         //在线数减1
         subOnlineCount();
         log.info("一个连接关闭！当前在线人数为【{}】", getOnlineCount());
@@ -92,8 +94,8 @@ public class WebSocketServer {
                     return;
                 }
                 String firstUser = users[1].trim();
-                if (StringUtils.isEmpty(firstUser) || "ALL".equals(firstUser.toUpperCase())) {
-                    String msg = userId + ": " + split[1];
+                if (StringUtils.isEmpty(firstUser) || "ALL".equalsIgnoreCase(firstUser.toUpperCase())) {
+                    String msg = username + ": " + split[1];
                     //群发消息
                     sendInfo(msg);
                 } else {//给特定人员发消息
@@ -104,7 +106,7 @@ public class WebSocketServer {
                     }
                 }
             } else {
-                sendInfo(userId + ": " + message);
+                sendInfo(username + ": " + message);
             }
         } catch (IOException e) {
             log.error(e.getMessage(), e);
@@ -119,16 +121,16 @@ public class WebSocketServer {
     /**
      * 给特定人员发送消息
      *
-     * @param userId 发送对象
+     * @param username 发送对象
      * @param message  消息内容
      * @throws IOException IOException
      */
-    private void sendMessageToSomeBody(String userId, String message) throws IOException {
-        if (users.get(userId) == null) {
+    private void sendMessageToSomeBody(String username, String message) throws IOException {
+        if (users.get(username) == null) {
             return;
         }
-        users.get(userId).session.getBasicRemote().sendText(this.userId + "发来的私信：" + message);
-        this.session.getBasicRemote().sendText(this.userId + "@" + userId + ": " + message);
+        users.get(username).session.getBasicRemote().sendText(this.now() + " " + this.username + "发来的私信：" + message);
+        this.session.getBasicRemote().sendText(this.now() + " " + this.username + "@" + username + ": " + message);
     }
 
     /**
@@ -137,7 +139,7 @@ public class WebSocketServer {
     public void sendInfo(String message) {
         for (WebSocketServer item : users.values()) {
             try {
-                item.session.getBasicRemote().sendText(message);
+                item.session.getBasicRemote().sendText(this.now() + " " + message);
             } catch (IOException e) {
                 log.error(e.getMessage(), e);
             }
@@ -154,5 +156,9 @@ public class WebSocketServer {
 
     private static synchronized void subOnlineCount() {
         WebSocketServer.onlineCount--;
+    }
+
+    private String now() {
+        return new SimpleDateFormat("HH:mm:ss").format(new Date());
     }
 }

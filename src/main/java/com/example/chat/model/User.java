@@ -12,8 +12,6 @@ import lombok.ToString;
 @ToString
 public class User {
 
-    private Integer id;
-
     private String username;
 
     private String password;
@@ -30,6 +28,6 @@ public class User {
 
     @Override
     public int hashCode() {
-        return this.id;
+        return (this.username + this.password).hashCode();
     }
 }

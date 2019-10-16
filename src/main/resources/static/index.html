@@ -17,7 +17,7 @@
         var socket;
 
         //登录过后初始化socket连接
-        function initSocket(id, wsUrl) {
+        function initSocket(wsUrl) {
             if (typeof (WebSocket) == "undefined") {
                 console.log("您的浏览器不支持WebSocket");
                 alert("您的浏览器不支持WebSocket");
@@ -118,10 +118,10 @@
     }
 
     $(document).ready(function (e) {
-        var id = getQueryVariable("id");
+        var username = getQueryVariable("username");
         var contextPath = getContextPath();
-        var wsUrl = "ws://" + location.host + contextPath + "/websocket/" + id;
-        initSocket(id, wsUrl);
+        var wsUrl = "ws://" + location.host + contextPath + "/websocket/" + username;
+        initSocket(wsUrl);
     })
 </script>
 </body>
