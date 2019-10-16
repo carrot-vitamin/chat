@@ -35,6 +35,10 @@
                 var histroy = $("#history").text();
                 $("#history").text(histroy + "\r\n" + msg.data);
                 console.log($(msg));
+
+                //控制滚动条在最底部
+                var textarea = document.getElementById('history');
+                textarea.scrollTop = textarea.scrollHeight;
             };
             //关闭事件
             socket.onclose = function () {
@@ -79,11 +83,11 @@
 <div class="row" style="margin-top: 20px;">
     <div class="col-md-3"></div>
     <div class="col-md-6">
-        <pre style="height: 400px;" id="history"></pre>
+        <textarea id="history" class="form-control" rows="15" readonly></textarea>
     </div>
     <div class="col-md-3"></div>
 </div>
-<div class="row">
+<div class="row" style="margin-top: 10px;">
     <div class="col-md-3"></div>
     <div class="col-md-6">
         <textarea id="msg" class="form-control" rows="3" placeholder="格式:@xxx#消息 , 或者@ALL#消息"></textarea>
