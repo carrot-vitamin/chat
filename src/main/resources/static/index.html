@@ -28,16 +28,23 @@
             socket = new WebSocket(wsUrl);
             socket.onopen = function () {
                 console.log("Socket 已打开");
+                heartCheck.reset().start();      //心跳检测重置
             };
             //获得消息事件
             socket.onmessage = function (msg) {
                 console.log("获得消息" + msg.data);
-                var history = $("#history").text();
-                $("#history").text(history + "\r\n" + msg.data);
+                heartCheck.reset().start();      //拿到任何消息都说明当前连接是正常的
 
-                //控制滚动条在最底部
-                var textarea = document.getElementById('history');
-                textarea.scrollTop = textarea.scrollHeight;
+                if ("HeartCheck" === msg.data) {
+                    console.log("接收到服务端心跳检测响应");
+                } else {
+                    var history = $("#history").text();
+                    $("#history").text(history + "\r\n" + msg.data);
+
+                    //控制滚动条在最底部
+                    var textarea = document.getElementById('history');
+                    textarea.scrollTop = textarea.scrollHeight;
+                }
             };
             //关闭事件
             socket.onclose = function () {
@@ -66,6 +73,30 @@
                 alert("不可发送空消息！");
             }
 
+        }
+
+        //心跳检测
+        var heartCheck = {
+            timeout: 60000,        //9分钟发一次心跳
+            timeoutObj: null,
+            serverTimeoutObj: null,
+            reset: function(){
+                clearTimeout(this.timeoutObj);
+                clearTimeout(this.serverTimeoutObj);
+                return this;
+            },
+            start: function(){
+                var self = this;
+                this.timeoutObj = setTimeout(function(){
+                    //这里发送一个心跳，后端收到后，返回一个心跳消息，
+                    //onmessage拿到返回的心跳就说明连接正常
+                    socket.send("ping");
+                    console.log("heart check !");
+                    self.serverTimeoutObj = setTimeout(function(){//如果超过一定时间还没重置，说明后端主动断开了
+                        socket.close();     //如果onclose会执行reconnect，我们执行ws.close()就行了.如果直接执行reconnect 会触发onclose导致重连两次
+                    }, self.timeout)
+                }, this.timeout)
+            }
         }
     </script>
 </head>
@@ -121,6 +152,7 @@
         var username = getQueryVariable("username");
         var contextPath = getContextPath();
         var wsUrl = "ws://" + location.host + contextPath + "/websocket/" + username;
+        console.log("websocket链接地址：" + wsUrl);
         initSocket(wsUrl);
     })
 </script>

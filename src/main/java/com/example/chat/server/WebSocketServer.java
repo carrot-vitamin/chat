@@ -81,6 +81,13 @@ public class WebSocketServer {
     @OnMessage
     public void onMessage(String message) {
         log.info("来自客户端的消息:" + message);
+
+        if ("ping".equalsIgnoreCase(message)) {
+            log.info("接收到客户端心跳检测消息：{}", message);
+            this.session.getAsyncRemote().sendText("HeartCheck");
+            return;
+        }
+
         //群发消息
         try {
             if (StringUtils.isEmpty(message)) {
@@ -129,8 +136,8 @@ public class WebSocketServer {
         if (users.get(username) == null) {
             return;
         }
-        users.get(username).session.getBasicRemote().sendText(this.now() + " " + this.username + "发来的私信：" + message);
-        this.session.getBasicRemote().sendText(this.now() + " " + this.username + "@" + username + ": " + message);
+        users.get(username).session.getBasicRemote().sendText(this.now() + this.username + "发来的私信：" + message);
+        this.session.getBasicRemote().sendText(this.now() + this.username + "@" + username + ": " + message);
     }
 
     /**
@@ -139,7 +146,7 @@ public class WebSocketServer {
     public void sendInfo(String message) {
         for (WebSocketServer item : users.values()) {
             try {
-                item.session.getBasicRemote().sendText(this.now() + " " + message);
+                item.session.getBasicRemote().sendText(this.now() + message);
             } catch (IOException e) {
                 log.error(e.getMessage(), e);
             }
@@ -159,6 +166,6 @@ public class WebSocketServer {
     }
 
     private String now() {
-        return new SimpleDateFormat("HH:mm:ss").format(new Date());
+        return "【" + new SimpleDateFormat("HH:mm:ss").format(new Date()) + "】";
     }
 }
