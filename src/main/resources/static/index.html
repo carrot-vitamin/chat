@@ -14,8 +14,43 @@
     <script src="js/bootstrap.min.js"></script>
 
     <script type="application/javascript">
-        var socket;
+        (function($) {
+            $.extend({
+                /**
+                 * 调用方法： var timerArr = $.blinkTitle.show();
+                 *     $.blinkTitle.clear(timerArr);
+                 */
+                blinkTitle : {
+                    show : function() { //有新消息时在title处闪烁提示
+                        var step=0, _title = document.title;
+                        var timer = setInterval(function() {
+                            step++;
+                            if (step==3) {step=1};
+                            if (step==1) {document.title='【　　　】'+_title};
+                            if (step==2) {document.title='【新消息】'+_title};
+                        }, 500);
+                        return [timer, _title];
+                    },
+                    /**
+                     * @param timerArr[0], timer标记
+                     * @param timerArr[1], 初始的title文本内容
+                     */
+                    clear : function(timerArr) {
+                        //去除闪烁提示，恢复初始title文本
+                        if(timerArr) {
+                            clearInterval(timerArr[0]);
+                            document.title = timerArr[1];
+                        };
+                    }
+                }
+            });
+        })(jQuery);
+    </script>
 
+    <script type="application/javascript">
+        var isWindowActive = true;
+        var timerArr;
+        var socket;
         //登录过后初始化socket连接
         function initSocket(wsUrl) {
             if (typeof (WebSocket) == "undefined") {
@@ -44,11 +79,23 @@
                     //控制滚动条在最底部
                     var textarea = document.getElementById('history');
                     textarea.scrollTop = textarea.scrollHeight;
+
+                    if (!isWindowActive) {
+                        //窗口未激活
+                        timerArr = $.blinkTitle.show();
+                    }
                 }
             };
             //关闭事件
             socket.onclose = function () {
                 console.log("Socket已关闭");
+
+                var history = $("#history").text();
+                $("#history").text(history + "\r\n" + "服务器socket已关闭！");
+
+                //控制滚动条在最底部
+                var textarea = document.getElementById('history');
+                textarea.scrollTop = textarea.scrollHeight;
             };
             //错误事件
             socket.onerror = function () {
@@ -154,6 +201,24 @@
         var wsUrl = "ws://" + location.host + contextPath + "/websocket/" + username;
         console.log("websocket链接地址：" + wsUrl);
         initSocket(wsUrl);
+
+
+        // 不同浏览器 hidden 名称
+        var hiddenProperty = 'hidden' in document ? 'hidden' :
+            'webkitHidden' in document ? 'webkitHidden' :
+                'mozHidden' in document ? 'mozHidden' :
+                    null;
+        // 不同浏览器的事件名
+        var visibilityChangeEvent = hiddenProperty.replace(/hidden/i, 'visibilitychange');
+        var onVisibilityChange = function(){
+            if (document[hiddenProperty]) {
+                isWindowActive = false;
+            } else {
+                isWindowActive = true;
+                $.blinkTitle.clear(timerArr);
+            }
+        };
+        document.addEventListener(visibilityChangeEvent, onVisibilityChange);
     })
 </script>
 </body>
