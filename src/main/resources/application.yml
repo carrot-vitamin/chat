@@ -1,8 +1,6 @@
 server:
   servlet:
     context-path: /chat
-    session:
-      timeout: 30m
   tomcat:
     uri-encoding: UTF-8
     max-http-post-size: -1

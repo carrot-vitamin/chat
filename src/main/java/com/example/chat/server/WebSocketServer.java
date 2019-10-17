@@ -70,7 +70,8 @@ public class WebSocketServer {
         users.remove(this.username);
         //在线数减1
         subOnlineCount();
-        log.info("一个连接关闭！当前在线人数为【{}】", getOnlineCount());
+        log.info("一个连接【{}】关闭！当前在线人数为【{}】", this.username, getOnlineCount());
+        this.sendInfo(this.username + "退出了房间");
     }
 
     /**
