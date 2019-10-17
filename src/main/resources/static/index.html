@@ -13,139 +13,34 @@
     <script src="js/jquery.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
 
-    <script type="application/javascript">
-        (function($) {
-            $.extend({
-                /**
-                 * 调用方法： var timerArr = $.blinkTitle.show();
-                 *     $.blinkTitle.clear(timerArr);
-                 */
-                blinkTitle : {
-                    show : function() { //有新消息时在title处闪烁提示
-                        var step=0, _title = document.title;
-                        var timer = setInterval(function() {
-                            step++;
-                            if (step==3) {step=1};
-                            if (step==1) {document.title='【　　　】'+_title};
-                            if (step==2) {document.title='【新消息】'+_title};
-                        }, 500);
-                        return [timer, _title];
-                    },
-                    /**
-                     * @param timerArr[0], timer标记
-                     * @param timerArr[1], 初始的title文本内容
-                     */
-                    clear : function(timerArr) {
-                        //去除闪烁提示，恢复初始title文本
-                        if(timerArr) {
-                            clearInterval(timerArr[0]);
-                            document.title = timerArr[1];
-                        };
-                    }
+    <script src="js/window.active.listener.js"></script>
+    <script src="js/socket.js"></script>
+
+    <script>
+        function getQueryVariable(variable) {
+            var query = window.location.search.substring(1);
+            var vars = query.split("&");
+            for (var i = 0; i < vars.length; i++) {
+                var pair = vars[i].split("=");
+                if (pair[0] === variable) {
+                    return pair[1];
                 }
-            });
-        })(jQuery);
-    </script>
-
-    <script type="application/javascript">
-        var isWindowActive = true;
-        var timerArr;
-        var socket;
-        //登录过后初始化socket连接
-        function initSocket(wsUrl) {
-            if (typeof (WebSocket) == "undefined") {
-                console.log("您的浏览器不支持WebSocket");
-                alert("您的浏览器不支持WebSocket");
-            } else {
-                console.log("您的浏览器支持WebSocket/websocket");
             }
-            //socket连接地址: 注意是ws协议
-            socket = new WebSocket(wsUrl);
-            socket.onopen = function () {
-                console.log("Socket 已打开");
-                heartCheck.reset().start();      //心跳检测重置
-            };
-            //获得消息事件
-            socket.onmessage = function (msg) {
-                console.log("获得消息" + msg.data);
-                heartCheck.reset().start();      //拿到任何消息都说明当前连接是正常的
+            return false;
+        }
 
-                if ("HeartCheck" === msg.data) {
-                    console.log("接收到服务端心跳检测响应");
-                } else {
-                    var history = $("#history").text();
-                    $("#history").text(history + "\r\n" + msg.data);
-
-                    //控制滚动条在最底部
-                    var textarea = document.getElementById('history');
-                    textarea.scrollTop = textarea.scrollHeight;
-
-                    if (!isWindowActive) {
-                        //窗口未激活
-                        timerArr = $.blinkTitle.show();
-                    }
-                }
-            };
-            //关闭事件
-            socket.onclose = function () {
-                console.log("Socket已关闭");
-
-                var history = $("#history").text();
-                $("#history").text(history + "\r\n" + "服务器已关闭！");
-
-                //控制滚动条在最底部
-                var textarea = document.getElementById('history');
-                textarea.scrollTop = textarea.scrollHeight;
-            };
-            //错误事件
-            socket.onerror = function () {
-                alert("Socket发生了错误");
-            }
-            $(window).unload(function () {
-                socket.close();
-            });
+        function getContextPath() {
+            var pathName = document.location.pathname;
+            var index = pathName.substr(1).indexOf("/");
+            return pathName.substr(0,index+1);
         }
 
         function isEmpty(obj) {
             return typeof obj == "undefined" || obj == null || obj === "";
         }
 
-        //点击按钮发送消息
-        function send() {
-            var msg = $("#msg").val();
-            if (!isEmpty(msg)) {
-                socket.send($("#msg").val());
-                $("#msg").val("");
-            } else {
-                alert("不可发送空消息！");
-            }
-
-        }
-
-        //心跳检测
-        var heartCheck = {
-            timeout: 300000,        //5分钟发一次心跳
-            timeoutObj: null,
-            serverTimeoutObj: null,
-            reset: function(){
-                clearTimeout(this.timeoutObj);
-                clearTimeout(this.serverTimeoutObj);
-                return this;
-            },
-            start: function(){
-                var self = this;
-                this.timeoutObj = setTimeout(function(){
-                    //这里发送一个心跳，后端收到后，返回一个心跳消息，
-                    //onmessage拿到返回的心跳就说明连接正常
-                    socket.send("ping");
-                    console.log("heart check !");
-                    self.serverTimeoutObj = setTimeout(function(){//如果超过一定时间还没重置，说明后端主动断开了
-                        socket.close();     //如果onclose会执行reconnect，我们执行ws.close()就行了.如果直接执行reconnect 会触发onclose导致重连两次
-                    }, self.timeout)
-                }, this.timeout)
-            }
-        }
     </script>
+
 </head>
 <body class="container-fluid">
 <div class="row">
@@ -171,54 +66,59 @@
 <div class="row" style="margin-top: 10px;">
     <div class="col-md-3"></div>
     <div class="col-md-6">
-        <button type="button" class="btn btn-primary" style="width: 100%;" onclick="send()">发送</button>
+        <button type="button" class="btn btn-primary" style="width: 100%;" id="sendMsg">发送</button>
     </div>
     <div class="col-md-3"></div>
 </div>
 
 <script type="application/javascript">
-    function getQueryVariable(variable) {
-        var query = window.location.search.substring(1);
-        var vars = query.split("&");
-        for (var i = 0; i < vars.length; i++) {
-            var pair = vars[i].split("=");
-            if (pair[0] === variable) {
-                return pair[1];
-            }
-        }
-        return false;
-    }
-
-    function getContextPath() {
-        var pathName = document.location.pathname;
-        var index = pathName.substr(1).indexOf("/");
-        return pathName.substr(0,index+1);
-    }
-
-    $(document).ready(function (e) {
+    $(document).ready(function () {
         var username = getQueryVariable("username");
         var contextPath = getContextPath();
         var wsUrl = "ws://" + location.host + contextPath + "/websocket/" + username;
         console.log("websocket链接地址：" + wsUrl);
         initSocket(wsUrl);
 
-
-        // 不同浏览器 hidden 名称
-        var hiddenProperty = 'hidden' in document ? 'hidden' :
-            'webkitHidden' in document ? 'webkitHidden' :
-                'mozHidden' in document ? 'mozHidden' :
-                    null;
-        // 不同浏览器的事件名
-        var visibilityChangeEvent = hiddenProperty.replace(/hidden/i, 'visibilitychange');
-        var onVisibilityChange = function(){
-            if (document[hiddenProperty]) {
-                isWindowActive = false;
+        $("#sendMsg").click(function () {
+            var msg = $("#msg").val();
+            if (!isEmpty(msg)) {
+                socket.send($("#msg").val());
+                $("#msg").val("");
             } else {
-                isWindowActive = true;
-                $.blinkTitle.clear(timerArr);
+                alert("不可发送空消息！");
+            }
+        });
+
+        function showMsg(message) {
+            var history = $("#history").text();
+            $("#history").text(history + "\r\n" + message);
+
+            //控制滚动条在最底部
+            var textarea = document.getElementById('history');
+            textarea.scrollTop = textarea.scrollHeight;
+        }
+
+        //获得消息事件
+        socket.onmessage = function (msg) {
+            console.log("获得消息" + msg.data);
+            heartCheck.reset().start();      //拿到任何消息都说明当前连接是正常的
+
+            if ("HeartCheck" === msg.data) {
+                console.log("接收到服务端心跳检测响应");
+            } else {
+                showMsg(msg.data);
+
+                if (!isWindowActive) {
+                    //窗口未激活
+                    timerArr = $.blinkTitle.show();
+                }
             }
         };
-        document.addEventListener(visibilityChangeEvent, onVisibilityChange);
+        //关闭事件
+        socket.onclose = function () {
+            console.log("Socket已关闭");
+            showMsg("服务器已关闭！");
+        };
     })
 </script>
 </body>
