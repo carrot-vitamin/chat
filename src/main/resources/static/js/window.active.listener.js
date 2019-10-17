@@ -40,8 +40,9 @@ var timerArr;
     });
 })(jQuery);
 
-//窗口title闪烁
+//窗口title闪烁 先关闭闪烁再开启闪烁
 function titleTwinkle() {
+    $.blinkTitle.clear(timerArr);
     timerArr = $.blinkTitle.show();
 }
 

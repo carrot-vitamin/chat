@@ -71,7 +71,9 @@ public class WebSocketServer {
         //在线数减1
         subOnlineCount();
         log.info("一个连接【{}】关闭！当前在线人数为【{}】", this.username, getOnlineCount());
-        this.sendInfo(this.username + "退出了房间");
+        if (!users.isEmpty()) {
+            this.sendInfo(this.username + "退出了房间");
+        }
     }
 
     /**
