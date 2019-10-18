@@ -1,5 +1,6 @@
 package com.example.chat.server;
 
+import com.example.chat.model.Client;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
@@ -30,49 +31,39 @@ public class WebSocketServer {
     /**
      * 创建一个线程安全的map
      */
-    private static Map<String, WebSocketServer> users = Collections.synchronizedMap(new HashMap<>());
-
-    /**
-     * 与某个客户端的连接会话，需要通过它来给客户端发送数据
-     */
-    private Session session;
-
-    /**
-     * 放入map中的key,用来表示该连接对象
-     */
-    private String username;
+    private static Map<String, Client> users = Collections.synchronizedMap(new HashMap<>());
 
     /**
      * 连接建立成功调用的方法
      */
     @OnOpen
     public void onOpen(Session session, @PathParam("username") String username) {
-        this.session = session;
-        this.username = username;
         //加入map中,为了测试方便使用username做key
-        users.put(username, this);
+        users.put(session.getId(), new Client(session, username));
         //在线数加1
         addOnlineCount();
         log.info("【{}】加入！当前在线人数为【{}】", username, getOnlineCount());
-        try {
-            this.session.getBasicRemote().sendText("连接成功");
-        } catch (IOException e) {
-            log.error("websocket IO异常", e);
-        }
+        session.getAsyncRemote().sendText("【" + username + "】" + "连接成功");
     }
 
     /**
      * 连接关闭调用的方法
      */
     @OnClose
-    public void onClose() {
+    public void onClose(Session session) {
         //从set中删除
-        users.remove(this.username);
+        String username = users.get(session.getId()).getUsername();
+        users.remove(session.getId());
         //在线数减1
         subOnlineCount();
-        log.info("一个连接【{}】关闭！当前在线人数为【{}】", this.username, getOnlineCount());
+        log.info("一个连接【{}】关闭！当前在线人数为【{}】", username, getOnlineCount());
         if (!users.isEmpty()) {
-            this.sendInfo(this.username + "退出了房间");
+            this.sendInfo(username + "退出了房间");
+        }
+        try {
+            session.close();
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
         }
     }
 
@@ -82,12 +73,14 @@ public class WebSocketServer {
      * @param message 客户端发送过来的消息
      */
     @OnMessage
-    public void onMessage(String message) {
+    public void onMessage(Session session, String message) {
         log.info("来自客户端的消息:" + message);
+
+        String username = users.get(session.getId()).getUsername();
 
         if ("ping".equalsIgnoreCase(message)) {
             log.info("接收到客户端心跳检测消息：{}", message);
-            this.session.getAsyncRemote().sendText("HeartCheck");
+            session.getAsyncRemote().sendText("HeartCheck");
             return;
         }
 
@@ -111,7 +104,7 @@ public class WebSocketServer {
                 } else {//给特定人员发消息
                     for (String user : users) {
                         if (!StringUtils.isEmpty(user.trim())) {
-                            this.sendMessageToSomeBody(user.trim(), split[1]);
+                            this.sendMessageToSomeBody(session, user.trim(), split[1]);
                         }
                     }
                 }
@@ -135,24 +128,32 @@ public class WebSocketServer {
      * @param message  消息内容
      * @throws IOException IOException
      */
-    private void sendMessageToSomeBody(String username, String message) throws IOException {
-        if (users.get(username) == null) {
+    private void sendMessageToSomeBody(Session session, String username, String message) throws IOException {
+        Client client = null;
+        for (Client client1 : users.values()) {
+            if (username.equalsIgnoreCase(client1.getUsername())) {
+                client = client1;
+                break;
+            }
+        }
+
+        if (client == null) {
+            log.warn("要私信的人【{}】不在聊天室！", username);
             return;
         }
-        users.get(username).session.getBasicRemote().sendText(this.now() + this.username + "发来的私信：" + message);
-        this.session.getBasicRemote().sendText(this.now() + this.username + "@" + username + ": " + message);
+
+        String from = users.get(session.getId()).getUsername();
+
+        client.getSession().getAsyncRemote().sendText(this.now() + from + "发来的私信：" + message);
+        session.getAsyncRemote().sendText(this.now() + from + "@" + username + ": " + message);
     }
 
     /**
      * 群发自定义消息
      */
     public void sendInfo(String message) {
-        for (WebSocketServer item : users.values()) {
-            try {
-                item.session.getBasicRemote().sendText(this.now() + message);
-            } catch (IOException e) {
-                log.error(e.getMessage(), e);
-            }
+        for (Client client : users.values()) {
+            client.getSession().getAsyncRemote().sendText(this.now() + message);
         }
     }
 
