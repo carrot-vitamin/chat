@@ -43,7 +43,7 @@ public class WebSocketServer {
         //在线数加1
         addOnlineCount();
         log.info("【{}】加入！当前在线人数为【{}】", username, getOnlineCount());
-        session.getAsyncRemote().sendText("【" + username + "】" + "连接成功");
+        session.getAsyncRemote().sendText(this.now() + "【" + username + "】" + "连接成功");
     }
 
     /**
