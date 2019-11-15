@@ -119,6 +119,13 @@
             console.log("Socket已关闭");
             showMsg("服务器已关闭！");
         };
+
+        $("#msg").keydown(function(event){
+            if(event.keyCode ==13){
+                $("#sendMsg").trigger("click");
+                return false;
+            }
+        });
     })
 </script>
 </body>
